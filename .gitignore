@@ -1,0 +1,15 @@
+# Build artifacts
+/build/
+/bin/
+
+# VSCode
+/.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Raylib compiled files inside submodule
+/external/raylib/projects/*
+/external/raylib/src/*.o
+/external/raylib/src/*.a
