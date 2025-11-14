@@ -22,7 +22,10 @@ typedef struct Jogador {
 
     struct Mapa *noAtual;
 } Jogador;
-
+typedef struct {
+    float x;
+    float y;
+} Posicao;
 bool IniciarJogador(Jogador* j,
                     Vector2 posInicial,
                     float velocidade,
@@ -41,6 +44,5 @@ void DescarregarJogador(Jogador* j);
 Vector2 TamanhoJogador(const Jogador* j);
 
 Vector4 DistanciaBordasJogador(const Jogador* j);
-
 
 #endif // JOGADOR_H

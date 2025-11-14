@@ -1,4 +1,4 @@
-#include "Objeto.h"
+#include "objeto.h"
 #include <string.h>
 
 bool IniciarObjeto(ObjetoLancavel* o, const char* caminhoSprite) {

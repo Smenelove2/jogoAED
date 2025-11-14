@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 struct ObjetoLancavel; 
+struct Jogador;
 
 typedef struct Monstro {
     Vector2 posicao;
@@ -38,5 +39,6 @@ void DescarregarMonstro(Monstro* m);
 
 void CarregarAssetsMonstro(Monstro* m); 
 
+Vector2 GerarMonstros(struct Jogador *jogador,int mapL, int mapC,int tileW, int tileH);
 
 #endif 
