@@ -70,6 +70,7 @@ jogoAED/
 ## 🧪 Teste rápido
 Setas movimentam um círculo na tela. `Esc` fecha o jogo.
 
+
 ## macOS / Linux - passos detalhados
 Se estiver em macOS ou Linux, siga estes passos para garantir que o jogo compile:
 
@@ -103,4 +104,3 @@ Se preferir, o comando direto para compilar apenas o demo console (sem raylib) �
 # compila demo console (usa libcurl do sistema)
 make -f ../base-raylib-w64-copy/Makefile monsters_demo
 ```
-
