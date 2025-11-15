@@ -20,6 +20,8 @@ typedef struct Jogador {
     bool alternarFrame;
     bool emMovimento;
 
+    int kills; // Contador de eliminações do jogador
+
     struct Mapa *noAtual;
 } Jogador;
 

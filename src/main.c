@@ -291,11 +291,27 @@ int main()
                 {
                     jogador.vida -= 10.0f;   // Jogador perde 10 de vida
                     monstros[i].vida = 0.0f; // Monstro morre
+                    // Marca monstro como inativo; morrerá a seguir no tratamento comum
                     monstros[i].ativo = false;
                     numMonstrosAtivos--;
+                    // Considera como eliminação se apropriado (colisão pode não ser "kill").
+                    // Aqui incrementamos kills para qualquer monstro que deixe de estar ativo.
+                    jogador.kills += 1;
                     printf("COLISAO! Jogador atingido. Vida: %.0f | Monstros: %d\n",
                            jogador.vida, numMonstrosAtivos);
                 }
+            }
+        }
+
+        // Verifica monstros que morreram por outros meios (vida <= 0) e contabiliza kills
+        for (int i = 0; i < MAX_MONSTROS; i++)
+        {
+            if (monstros[i].ativo && monstros[i].vida <= 0.0f)
+            {
+                monstros[i].ativo = false;
+                numMonstrosAtivos--;
+                jogador.kills += 1;
+                printf("Monstro eliminado! Kills: %d | Monstros: %d\n", jogador.kills, numMonstrosAtivos);
             }
         }
 
@@ -350,6 +366,7 @@ int main()
         DrawText("ESC para sair", 20, 20, 20, WHITE);
         DrawText(TextFormat("Vida: %.0f", jogador.vida), 20, 50, 20, RED);
         DrawText(TextFormat("Monstros Ativos: %d/%d", numMonstrosAtivos, numMonstrosMaximos), 20, 80, 20, YELLOW);
+        DrawText(TextFormat("Kills: %d", jogador.kills), 20, 140, 20, GREEN);
         DrawText(TextFormat("Posicao: (%.0f, %.0f)", jogador.posicao.x, jogador.posicao.y), 20, 110, 20, LIGHTGRAY);
 
         // --- HUD ADICIONADO PARA DEBUG ---

@@ -1,9 +1,9 @@
 #include "jogador.h"
-#include "mapa.h"  
+#include "mapa.h"
 #include <math.h>
 #include <string.h>
 
-#define MAP_L 65 
+#define MAP_L 65
 #define MAP_C 65
 
 static inline float ComprimentoVetor(float x, float y) {
@@ -40,7 +40,9 @@ bool IniciarJogador(Jogador* j,
     j->fpsAndar      = (fpsAndar <= 0.0f) ? 10.0f : fpsAndar;
     j->acumulador    = 0.0f;
     j->alternarFrame = true;
-    j->emMovimento   = false;
+    j->emMovimento = false;
+
+    j->kills = 0;
 
     j->noAtual = NULL;
 
@@ -129,15 +131,15 @@ Vector4 DistanciaBordasJogador(const Jogador* j) {
 
     const int i = j->noAtual->linha;
     const int jx = j->noAtual->coluna;
-    
-    distancias.y = (float)i; 
-    
-    distancias.w = (float)(MAP_L - 1 - i); 
-    
-    distancias.x = (float)jx; 
-    
-    distancias.z = (float)(MAP_C - 1 - jx); 
-    
+
+    distancias.y = (float)i;
+
+    distancias.w = (float)(MAP_L - 1 - i);
+
+    distancias.x = (float)jx;
+
+    distancias.z = (float)(MAP_C - 1 - jx);
+
     return distancias;
 }
 
