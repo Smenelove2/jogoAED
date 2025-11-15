@@ -40,5 +40,6 @@ void DescarregarJogador(Jogador* j);
 
 Vector2 TamanhoJogador(const Jogador* j);
 
+Vector4 DistanciaBordasJogador(const Jogador* j);
 
 #endif // JOGADOR_H
