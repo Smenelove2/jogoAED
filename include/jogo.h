@@ -11,6 +11,10 @@
 #include "arma_secundaria.h"
 #include "equipamentos.h"
 #include "estado_habilidade.h"
+#include "monstro.h"
+#include "objeto.h"
+
+#define MAX_OBJETOS_VOO 50
 
 typedef struct {
     bool ativo;
@@ -33,6 +37,11 @@ typedef struct {
     bool pausado;
     bool solicitouRetornoMenu;
     EfeitoVisualArmaPrincipal efeitoArmaPrincipal;
+    Monstro monstros[MAX_MONSTROS];
+    int monstrosAtivos;
+    float tempoSpawnMonstro;
+    float intervaloSpawnMonstro;
+    ObjetoLancavel objetosEmVoo[MAX_OBJETOS_VOO];
 } EstadoJogo;
 
 void JogoInicializar(EstadoJogo *estado, float regeneracaoBase);
@@ -78,5 +87,7 @@ void JogoDesenhar(EstadoJogo *estado,
                   const ArmaSecundaria *armaSecundariaAtual,
                   Vector2 mousePos,
                   bool mouseClick);
+
+void JogoLiberarRecursos(EstadoJogo *estado);
 
 #endif

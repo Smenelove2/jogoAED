@@ -41,7 +41,6 @@ void DesenharJogador(const Jogador* j);
 void DescarregarJogador(Jogador* j);
 
 Vector2 TamanhoJogador(const Jogador* j);
-Vector4 DistanciaBordasJogador(const Jogador* j);
 
 void AplicarColisaoPosicaoJogador(Jogador* j, Vector2 posAnterior,
                                   struct Mapa **mapa, int linhas, int colunas,

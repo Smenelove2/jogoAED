@@ -6,6 +6,14 @@
 #include <string.h>
 
 #define RAYGUN_PROJETIL_VELOCIDADE 650.0f
+#define VIDA_MONSTRO_BASE 100.0f
+#define VELOCIDADE_MONSTRO 60.0f
+#define FPS_ANIM_MONSTRO 8.0f
+#define ALCANCE_MONSTRO 150.0f
+#define COOLDOWN_MONSTRO 1.0f
+#define DANO_COLISAO_MONSTRO 10.0f
+#define DANO_OBJETO_MONSTRO 5.0f
+#define INTERVALO_SPAWN_MONSTRO 2.0f
 
 static float ComprimentoV2(Vector2 v)
 {
@@ -19,12 +27,81 @@ static Vector2 NormalizarV2(Vector2 v)
     return (Vector2){ v.x / len, v.y / len };
 }
 
+static void ResetarMonstros(EstadoJogo *estado)
+{
+    if (!estado) return;
+    for (int i = 0; i < MAX_MONSTROS; ++i) {
+        if (estado->monstros[i].sprite1.id != 0 ||
+            estado->monstros[i].sprite2.id != 0 ||
+            estado->monstros[i].sprite3.id != 0) {
+            DescarregarMonstro(&estado->monstros[i]);
+        } else {
+            memset(&estado->monstros[i], 0, sizeof(Monstro));
+        }
+        estado->monstros[i].ativo = false;
+    }
+    memset(estado->objetosEmVoo, 0, sizeof(estado->objetosEmVoo));
+    estado->monstrosAtivos = 0;
+    estado->tempoSpawnMonstro = 0.0f;
+    estado->intervaloSpawnMonstro = INTERVALO_SPAWN_MONSTRO;
+}
+
+static void DesativarMonstro(EstadoJogo *estado, Monstro *monstro)
+{
+    if (!estado || !monstro || !monstro->ativo) return;
+    DescarregarMonstro(monstro);
+    monstro->ativo = false;
+    if (estado->monstrosAtivos > 0) estado->monstrosAtivos--;
+}
+
+static void RegistrarObjetoLancado(EstadoJogo *estado, const ObjetoLancavel *origem)
+{
+    if (!estado || !origem) return;
+    for (int k = 0; k < MAX_OBJETOS_VOO; ++k) {
+        if (!estado->objetosEmVoo[k].ativo) {
+            estado->objetosEmVoo[k] = *origem;
+            estado->objetosEmVoo[k].tempoVida = 0.0f;
+            return;
+        }
+    }
+}
+
+static void AtualizarObjetosLancados(EstadoJogo *estado, Jogador *jogador, float dt)
+{
+    if (!estado || !jogador) return;
+    for (int i = 0; i < MAX_OBJETOS_VOO; ++i) {
+        ObjetoLancavel *obj = &estado->objetosEmVoo[i];
+        if (!obj->ativo) continue;
+        AtualizarObjeto(obj, dt);
+        if (VerificarColisaoObjetoJogador(obj, jogador)) {
+            jogador->vida -= DANO_OBJETO_MONSTRO;
+            if (jogador->vida < 0.0f) jogador->vida = 0.0f;
+            obj->ativo = false;
+            continue;
+        }
+        if (obj->tempoVida > MAX_TEMPO) {
+            obj->ativo = false;
+        }
+    }
+}
+
+static void DesenharObjetosLancados(const EstadoJogo *estado)
+{
+    if (!estado) return;
+    for (int i = 0; i < MAX_OBJETOS_VOO; ++i) {
+        if (estado->objetosEmVoo[i].ativo) {
+            DesenharObjeto(&estado->objetosEmVoo[i]);
+        }
+    }
+}
+
 void JogoInicializar(EstadoJogo *estado, float regeneracaoBase)
 {
     if (!estado) return;
     memset(estado, 0, sizeof(*estado));
     estado->regeneracaoAtual = regeneracaoBase;
     estado->solicitouRetornoMenu = false;
+    ResetarMonstros(estado);
 }
 
 void JogoReiniciar(EstadoJogo *estado, Jogador *jogador, Camera2D *camera, Vector2 posInicial)
@@ -38,6 +115,7 @@ void JogoReiniciar(EstadoJogo *estado, Jogador *jogador, Camera2D *camera, Vecto
     estado->pausado = false;
     estado->efeitoArmaPrincipal.ativo = false;
     estado->solicitouRetornoMenu = false;
+    ResetarMonstros(estado);
     jogador->posicao = posInicial;
     camera->target = jogador->posicao;
 }
@@ -54,6 +132,39 @@ static void AtualizarRaygun(EstadoJogo *estado, float dt)
         snprintf(estado->mensagemAtaque, sizeof(estado->mensagemAtaque), "RayGun impactou!");
         estado->tempoMensagemAtaque = 0.5f;
     }
+}
+
+static bool TentarSpawnMonstro(EstadoJogo *estado,
+                               Jogador *jogador,
+                               int linhasMapa,
+                               int colunasMapa,
+                               int tileLargura,
+                               int tileAltura)
+{
+    if (!estado || !jogador) return false;
+    for (int i = 0; i < MAX_MONSTROS; ++i) {
+        Monstro *monstro = &estado->monstros[i];
+        if (monstro->ativo) continue;
+
+        Vector2 spawn = GerarMonstros(jogador, linhasMapa, colunasMapa, tileLargura, tileAltura);
+        TipoMonstro tipo = (TipoMonstro)GetRandomValue(0, MONSTRO_TIPOS_COUNT - 1);
+        memset(monstro, 0, sizeof(Monstro));
+        if (IniciarMonstro(monstro,
+                           spawn,
+                           VIDA_MONSTRO_BASE,
+                           VELOCIDADE_MONSTRO,
+                           FPS_ANIM_MONSTRO,
+                           ALCANCE_MONSTRO,
+                           COOLDOWN_MONSTRO,
+                           tipo)) {
+            CarregarAssetsMonstro(monstro);
+            monstro->ativo = true;
+            estado->monstrosAtivos++;
+            return true;
+        }
+        break;
+    }
+    return false;
 }
 
 void JogoAtualizar(EstadoJogo *estado,
@@ -187,6 +298,35 @@ void JogoAtualizar(EstadoJogo *estado,
             if (jogador->vida > jogador->vidaMaxima) jogador->vida = jogador->vidaMaxima;
         }
 
+        estado->tempoSpawnMonstro += dt;
+        if (estado->tempoSpawnMonstro >= estado->intervaloSpawnMonstro &&
+            estado->monstrosAtivos < MAX_MONSTROS) {
+            estado->tempoSpawnMonstro = 0.0f;
+            TentarSpawnMonstro(estado, jogador, linhasMapa, colunasMapa, tileLargura, tileAltura);
+        }
+
+        for (int i = 0; i < MAX_MONSTROS; ++i) {
+            Monstro *monstro = &estado->monstros[i];
+            if (!monstro->ativo) continue;
+            AtualizarMonstro(monstro, dt);
+            IAAtualizarMonstro(monstro, jogador, dt);
+
+            if (monstro->objeto && TentarLancarObjeto(monstro, dt, jogador->posicao)) {
+                RegistrarObjetoLancado(estado, monstro->objeto);
+                monstro->objeto->ativo = false;
+            }
+
+            if (VerificarColisaoMonstroJogador(monstro, jogador)) {
+                jogador->vida -= DANO_COLISAO_MONSTRO;
+                if (jogador->vida < 0.0f) jogador->vida = 0.0f;
+                DesativarMonstro(estado, monstro);
+            } else if (monstro->vida <= 0.0f) {
+                DesativarMonstro(estado, monstro);
+            }
+        }
+
+        AtualizarObjetosLancados(estado, jogador, dt);
+
         if (armaSecundariaAtual && mouseClickDir) {
             if (estado->armaSecundaria.ativo || estado->cooldownArmaSecundaria > 0.0f) {
                 snprintf(estado->mensagemAtaque, sizeof(estado->mensagemAtaque), "Arma Secundaria CD: %.1fs", estado->cooldownArmaSecundaria);
@@ -214,6 +354,11 @@ void JogoAtualizar(EstadoJogo *estado,
         }
     } else {
         AtualizarRaygun(estado, dt);
+    }
+    if (estado->pausado) {
+        // mantém objetos parados quando pausado
+    } else {
+        // nada extra, já atualizado acima
     }
 }
 
@@ -265,9 +410,17 @@ void JogoDesenhar(EstadoJogo *estado,
         if (armaPrincipalAtual) {
             DesenharArmaPrincipal(armaPrincipalAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, 1.0f);
         }
+        DesenharObjetosLancados(estado);
+        for (int i = 0; i < MAX_MONSTROS; ++i) {
+            if (estado->monstros[i].ativo) {
+                DesenharMonstro(&estado->monstros[i]);
+            }
+        }
     EndMode2D();
 
     DrawText("ESC para pausar", 20, 20, UI_AjustarTamanhoFonteInt(20.0f), WHITE);
+    DrawText(TextFormat("Monstros: %d/%d", estado->monstrosAtivos, MAX_MONSTROS),
+             20, 50, UI_AjustarTamanhoFonteInt(18.0f), LIGHTGRAY);
 
     float vidaAtual = jogador->vida;
     float vidaMax = jogador->vidaMaxima;
@@ -340,4 +493,9 @@ void JogoDesenhar(EstadoJogo *estado,
             estado->solicitouRetornoMenu = true;
         }
     }
+}
+
+void JogoLiberarRecursos(EstadoJogo *estado)
+{
+    ResetarMonstros(estado);
 }
