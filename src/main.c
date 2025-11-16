@@ -1,8 +1,18 @@
 #include "raylib.h"
 #include "jogador.h"
 #include "mapa.h"
+#include "capacete.h"
+#include "armadura.h"
+#include "arma_principal.h"
+#include "arma_secundaria.h"
+#include "equipamentos.h"
+#include "ui_utils.h"
+#include "menu.h"
+#include "jogo.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+#include <math.h>
 
 #define MAP_L 65
 #define MAP_C 65
@@ -12,110 +22,53 @@ static int TILE_W = 64;
 static int TILE_H = 64;
 static Mapa **gMapa = NULL;
 
-// Converte de posição no mundo (pixels) para índice da grade
-static inline bool WorldToGrid(Vector2 pos, int *outI, int *outJ) {
-    if (pos.x < 0 || pos.y < 0) return false;
-    int j = (int)(pos.x / TILE_W);
-    int i = (int)(pos.y / TILE_H);
-    if (i < 0 || j < 0 || i >= MAP_L || j >= MAP_C) return false;
-    if (outI) *outI = i;
-    if (outJ) *outJ = j;
-    return true;
-}
+typedef enum {
+    TELA_MENU = 0,
+    TELA_CONFIG,
+    TELA_JOGO
+} TelaAtual;
 
-static inline bool TileColideIJ(int i, int j) {
-    if (i < 0 || j < 0 || i >= MAP_L || j >= MAP_C) return true; // fora do mapa = bloqueia
-    return gMapa[i][j].colisao;
-}
+static TelaAtual gTelaAtual = TELA_MENU;
+static float gVidaBaseJogador = 100.0f;
+static const float LARGURA_BASE_UI = 1280.0f;
+static const float ALTURA_BASE_UI = 720.0f;
 
-// Colisão simples: se o centro do jogador cair em um tile de cerca, desfaz o movimento
-static void AplicarColisaoPosicaoJogador(Jogador *j, Vector2 posAnterior) {
-    int i, jx;
-    if (!WorldToGrid(j->posicao, &i, &jx)) {
-        j->posicao = posAnterior;
-        return;
-    }
-    if (TileColideIJ(i, jx)) {
-        j->posicao = posAnterior;
-    }
-}
+int main(void)
+{
+    const int larguraInicial = 1280;
+    const int alturaInicial = 720;
 
-// Desenha apenas o que está visível no retângulo da câmera
-static void DesenharMapaVisivel(Camera2D *cam, int telaW, int telaH) {
-    Vector2 topoEsq = GetScreenToWorld2D((Vector2){0,0}, *cam);
-    Vector2 botDir  = GetScreenToWorld2D((Vector2){(float)telaW,(float)telaH}, *cam);
-
-    int jIni = (int)(topoEsq.x / TILE_W) - 1;
-    int iIni = (int)(topoEsq.y / TILE_H) - 1;
-    int jFim = (int)(botDir.x  / TILE_W) + 1;
-    int iFim = (int)(botDir.y  / TILE_H) + 1;
-
-    if (jIni < 0) jIni = 0;
-    if (iIni < 0) iIni = 0;
-    if (jFim > MAP_C-1) jFim = MAP_C-1;
-    if (iFim > MAP_L-1) iFim = MAP_L-1;
-
-    for (int i = iIni; i <= iFim; ++i) {
-        for (int j = jIni; j <= jFim; ++j) {
-            int id = gMapa[i][j].id_tile; // 0..13
-            // Usa a posição em pixels armazenada no nó
-            Vector2 pos = { gMapa[i][j].posX, gMapa[i][j].posY };
-            DrawTextureV(gTiles[id], pos, WHITE);
-        }
-    }
-}
-
-// --- NOVA FUNÇÃO ---
-// Atualiza o ponteiro 'noAtual' do jogador para o tile em que ele se encontra
-static void AtualizarNoAtualJogador(Jogador *j) {
-    int i, jx;
-    // Converte a posição de pixels do jogador para índices da grade
-    if (WorldToGrid(j->posicao, &i, &jx)) {
-        // Atualiza o ponteiro para apontar para o nó correto na matriz global
-        j->noAtual = &gMapa[i][jx];
-    } else {
-        // Se estiver fora do mapa, seta como NULL
-        j->noAtual = NULL;
-    }
-}
-
-// ------------------------------------------------------------
-
-int main() {
-    const int largura = 1920;
-    const int altura  = 1080;
-
-    InitWindow(largura, altura, "Tarefa: Identificar No do Jogador");
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(larguraInicial, alturaInicial, "Tarefa: Identificar No do Jogador");
+    SetWindowMinSize(960, 540);
     SetTargetFPS(60);
+    SetExitKey(KEY_NULL);
 
-    // ----- Mapa: Etapa 1: Descobrir tamanho do Tile -----
-    // Carrega um tile de referência (grama) primeiro
+    Font fonteNormal = LoadFont("assets/fontes/PixelOperator.ttf");
+    Font fonteBold = LoadFont("assets/fontes/PixelOperator-Bold.ttf");
+    Font fonteBoldPequena = LoadFont("assets/fontes/PixelOperator8-Bold.ttf");
+
     gTiles[12] = LoadTexture("assets/tiles/grama1.png");
     if (gTiles[12].id == 0) {
-        printf("Erro: Não foi possível carregar tile de referência 'grama1.png'\n");
+        printf("Erro: Nao foi possivel carregar tile de referencia 'grama1.png'\n");
         CloseWindow();
         return 1;
     }
-    // Define o tamanho global dos tiles baseado na textura carregada
     TILE_W = gTiles[12].width;
     TILE_H = gTiles[12].height;
     printf("Tamanho do tile detectado: %dx%d\n", TILE_W, TILE_H);
 
-
-    // ----- Mapa: Etapa 2: Criar estrutura de dados -----
-    // Agora que TILE_W/H são conhecidos, podemos criar o mapa
-    gMapa = criar_mapa_encadeado(MAP_L, MAP_C, TILE_W, TILE_H); // <-- PASSANDO OS PARÂMETROS
+    gMapa = criar_mapa_encadeado(MAP_L, MAP_C, TILE_W, TILE_H);
     if (!gMapa) {
-        UnloadTexture(gTiles[12]); // Libera o tile de referência
+        UnloadTexture(gTiles[12]);
         CloseWindow();
         return 1;
     }
 
-    // ----- Mapa: Etapa 3: Carregar os tiles restantes -----
-    gTiles[0]  = LoadTexture("assets/tiles/cercadoPonta1.png");   // topo-esq
-    gTiles[1]  = LoadTexture("assets/tiles/cercadoPonta2.png");   // topo-dir
-    gTiles[2]  = LoadTexture("assets/tiles/cercadoPonta3.png");   // baixo-esq
-    gTiles[3]  = LoadTexture("assets/tiles/cercadoPonta4.png");   // baixo-dir
+    gTiles[0]  = LoadTexture("assets/tiles/cercadoPonta1.png");
+    gTiles[1]  = LoadTexture("assets/tiles/cercadoPonta2.png");
+    gTiles[2]  = LoadTexture("assets/tiles/cercadoPonta3.png");
+    gTiles[3]  = LoadTexture("assets/tiles/cercadoPonta4.png");
     gTiles[4]  = LoadTexture("assets/tiles/cercadoEsquerda1.png");
     gTiles[5]  = LoadTexture("assets/tiles/cercadoEsquerda2.png");
     gTiles[6]  = LoadTexture("assets/tiles/cercadoDireita1.png");
@@ -124,10 +77,8 @@ int main() {
     gTiles[9]  = LoadTexture("assets/tiles/cercadoCima2.png");
     gTiles[10] = LoadTexture("assets/tiles/cercadoBaixo1.png");
     gTiles[11] = LoadTexture("assets/tiles/cercadoBaixo2.png");
-    // gTiles[12] já foi carregado
     gTiles[13] = LoadTexture("assets/tiles/grama2.png");
 
-    // Valida carregamento (agora checa todos)
     bool okTiles = true;
     for (int t = 0; t < 14; ++t) {
         if (gTiles[t].id == 0) {
@@ -136,14 +87,14 @@ int main() {
         }
     }
     if (!okTiles) {
-        for (int t = 0; t < 14; ++t) if (gTiles[t].id != 0) UnloadTexture(gTiles[t]);
+        for (int t = 0; t < 14; ++t) {
+            if (gTiles[t].id != 0) UnloadTexture(gTiles[t]);
+        }
         destruir_mapa_encadeado(gMapa, MAP_L);
         CloseWindow();
         return 1;
     }
-    // TILE_W e TILE_H já foram definidos, não precisa mais
 
-    // ----- Inicializa o jogador -----
     Vector2 posInicial = {
         (MAP_C * TILE_W) / 2.0f,
         (MAP_L * TILE_H) / 2.0f
@@ -153,106 +104,168 @@ int main() {
     bool ok = IniciarJogador(
         &jogador,
         posInicial,
-        400.0f,   // velocidade
-        10.0f,    // fps da caminhada
-        100.0f,   // vida
+        400.0f,
+        10.0f,
+        100.0f,
         "assets/personagem/personagemParado.png",
         "assets/personagem/personagemAndando1.png",
         "assets/personagem/personagemAndando2.png"
     );
     if (!ok) {
-        for (int t=0; t<14; ++t) UnloadTexture(gTiles[t]);
+        for (int t = 0; t < 14; ++t) UnloadTexture(gTiles[t]);
         destruir_mapa_encadeado(gMapa, MAP_L);
         CloseWindow();
         return 1;
     }
-    
-    // --- LÓGICA ADICIONADA: Definir o nó inicial do jogador ---
-    // (IniciarJogador setou como NULL, agora atualizamos para o nó inicial)
-    AtualizarNoAtualJogador(&jogador);
+    gVidaBaseJogador = jogador.vidaMaxima;
+
+    CarregarTexturasEquipamentos();
+
+    EstadoMenu estadoMenu;
+    MenuInicializarEstado(&estadoMenu);
+    EstadoJogo estadoJogo;
+    JogoInicializar(&estadoJogo, jogador.regeneracaoBase);
+
+    Capacete *capaceteAtual = NULL;
+    Armadura *armaduraAtual = NULL;
+    ArmaPrincipal *armaPrincipalAtual = NULL;
+    ArmaSecundaria *armaSecundariaAtual = NULL;
+
+    AtualizarNoAtualJogador(&jogador, gMapa, MAP_L, MAP_C, TILE_W, TILE_H);
     if (jogador.noAtual) {
-        printf("Jogador iniciou no nó (%d, %d)\n", jogador.noAtual->linha, jogador.noAtual->coluna);
+        printf("Jogador iniciou no no (%d, %d)\n", jogador.noAtual->linha, jogador.noAtual->coluna);
     }
 
-    // ----- Configura a câmera -----
     Camera2D camera = {0};
     camera.target = jogador.posicao;
-    camera.offset = (Vector2){ largura / 2.0f, altura / 2.0f };
+    camera.offset = (Vector2){ larguraInicial / 2.0f, alturaInicial / 2.0f };
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
 
-    Vector2 tam = TamanhoJogador(&jogador);
-    printf("Sprite atual do jogador: %.0fx%.0f\n", tam.x, tam.y);
+    bool solicitarEncerramento = false;
+    while (!solicitarEncerramento) {
+        if (WindowShouldClose()) break;
 
-    while (!WindowShouldClose()) {
         float dt = GetFrameTime();
+        int largura = GetScreenWidth();
+        int altura = GetScreenHeight();
+        float escalaH = (float)largura / LARGURA_BASE_UI;
+        float escalaV = (float)altura / ALTURA_BASE_UI;
+        float escalaUIAtual = fminf(escalaH, escalaV);
+        if (escalaUIAtual < 0.7f) escalaUIAtual = 0.7f;
+        if (escalaUIAtual > 1.8f) escalaUIAtual = 1.8f;
+        UI_SetEscala(escalaUIAtual);
 
-        // Guarda posição anterior para corrigir se colidir
-        Vector2 posAnterior = jogador.posicao;
+        camera.offset = (Vector2){ largura / 2.0f, altura / 2.0f };
+        Vector2 mousePos = GetMousePosition();
+        bool mouseCliqueEsq = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        bool mouseCliqueDir = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+        bool escapePress = IsKeyPressed(KEY_ESCAPE);
 
-        // Atualiza jogador (movimento, animação etc.)
-        AtualizarJogador(&jogador, dt);
-
-        // --- LÓGICA ADICIONADA ---
-        // Identifica em qual nó da grade o jogador está agora (baseado no centro)
-        AtualizarNoAtualJogador(&jogador);
-        // --- FIM DA LÓGICA ADICIONADA ---
-
-        // Colisão com tiles (checa tile sob o centro do jogador)
-        // AplicarColisaoPosicaoJogador(&jogador, posAnterior); // <- Você pode descomentar isso
-        
-        // Colisão alternativa (usa o ponteiro noAtual que acabamos de atualizar)
-        if (jogador.noAtual && jogador.noAtual->colisao) {
-             jogador.posicao = posAnterior;
-             // Re-atualiza o noAtual para o nó anterior (válido)
-             AtualizarNoAtualJogador(&jogador);
-        }
-
-
-        // Mantém o jogador dentro do mapa (clamp mundo)
-        float maxX = MAP_C * (float)TILE_W - 1.0f;
-        float maxY = MAP_L * (float)TILE_H - 1.0f;
-        if (jogador.posicao.x < 0) jogador.posicao.x = 0;
-        if (jogador.posicao.y < 0) jogador.posicao.y = 0;
-        if (jogador.posicao.x > maxX) jogador.posicao.x = maxX;
-        if (jogador.posicao.y > maxY) jogador.posicao.y = maxY;
-
-        // Atualiza a câmera
-        camera.target = jogador.posicao;
-
-        // ---------- Desenho ----------
         BeginDrawing();
-        ClearBackground(BLACK);
+        ClearBackground((Color){12, 12, 26, 255});
 
-        BeginMode2D(camera);
-            // Mapa (apenas visível)
-            DesenharMapaVisivel(&camera, largura, altura);
-
-            // Jogador
-            DesenharJogador(&jogador);
-        EndMode2D();
-
-        // HUD (fixo na tela)
-        DrawText("ESC para sair", 20, 20, 20, WHITE);
-        DrawText(TextFormat("Posicao: (%.0f, %.0f)", jogador.posicao.x, jogador.posicao.y), 20, 50, 20, LIGHTGRAY);
-
-        // --- HUD ADICIONADO PARA DEBUG ---
-        if (jogador.noAtual) {
-            DrawText(TextFormat("No Atual: (%d, %d)", jogador.noAtual->linha, jogador.noAtual->coluna), 20, 80, 20, LIME);
-            DrawText(TextFormat("  TileID: %d", jogador.noAtual->id_tile), 20, 110, 20, LIME);
-            DrawText(TextFormat("  Colisao: %s", jogador.noAtual->colisao ? "Sim" : "Nao"), 20, 140, 20, LIME);
-            DrawText(TextFormat("  Pos (px): (%.0f, %.0f)", jogador.noAtual->posX, jogador.noAtual->posY), 20, 170, 20, LIME);
-        } else {
-            DrawText("No Atual: (Fora do Mapa)", 20, 80, 20, RED);
+        switch (gTelaAtual) {
+            case TELA_MENU: {
+                AcaoMenu acao = MenuDesenharTelaInicial(&estadoMenu,
+                                                        mousePos,
+                                                        mouseCliqueEsq,
+                                                        fonteBold,
+                                                        fonteBoldPequena,
+                                                        largura,
+                                                        altura);
+                if (acao == MENU_ACAO_JOGAR) {
+                    gTelaAtual = TELA_CONFIG;
+                } else if (acao == MENU_ACAO_SAIR) {
+                    solicitarEncerramento = true;
+                }
+            } break;
+            case TELA_CONFIG: {
+                ResultadoMenu resultado = MenuDesenharTelaConfig(&estadoMenu,
+                                                                 mousePos,
+                                                                 mouseCliqueEsq,
+                                                                 fonteNormal,
+                                                                 fonteBold,
+                                                                 &jogador,
+                                                                 largura,
+                                                                 altura);
+                if (resultado.acao == MENU_ACAO_VOLTAR) {
+                    gTelaAtual = TELA_MENU;
+                } else if (resultado.acao == MENU_ACAO_JOGAR) {
+                    capaceteAtual = resultado.capacete;
+                    armaduraAtual = resultado.armadura;
+                    armaPrincipalAtual = resultado.armaPrincipal;
+                    armaSecundariaAtual = resultado.armaSecundaria;
+                    if (armaPrincipalAtual) armaPrincipalAtual->tempoRecargaRestante = 0.0f;
+                    estadoJogo.regeneracaoAtual =
+                        AtualizarVidaJogadorComEquipamentos(&jogador, armaduraAtual, capaceteAtual, gVidaBaseJogador);
+                    jogador.vida = jogador.vidaMaxima;
+                    JogoReiniciar(&estadoJogo, &jogador, &camera, posInicial);
+                    gTelaAtual = TELA_JOGO;
+                }
+            } break;
+            case TELA_JOGO: {
+                Vector2 mouseNoMundo = GetScreenToWorld2D(mousePos, camera);
+                JogoAtualizar(&estadoJogo,
+                              &jogador,
+                              &camera,
+                              gMapa,
+                              MAP_L,
+                              MAP_C,
+                              TILE_W,
+                              TILE_H,
+                              dt,
+                              mouseNoMundo,
+                              mouseCliqueEsq,
+                              mouseCliqueDir,
+                              escapePress,
+                              armaduraAtual,
+                              capaceteAtual,
+                              armaPrincipalAtual,
+                              armaSecundariaAtual);
+                JogoDesenhar(&estadoJogo,
+                             &jogador,
+                             &camera,
+                             gMapa,
+                             gTiles,
+                             14,
+                             MAP_L,
+                             MAP_C,
+                             TILE_W,
+                             TILE_H,
+                             largura,
+                             altura,
+                             fonteNormal,
+                             fonteBold,
+                             armaduraAtual,
+                             capaceteAtual,
+                             armaPrincipalAtual,
+                             armaSecundariaAtual,
+                             mousePos,
+                             mouseCliqueEsq);
+                if (estadoJogo.solicitouRetornoMenu) {
+                    estadoJogo.solicitouRetornoMenu = false;
+                    gTelaAtual = TELA_MENU;
+                }
+            } break;
         }
 
         EndDrawing();
+
+        if (solicitarEncerramento) break;
     }
 
-    // ----- Cleanup -----
+    DescarregarTexturasEquipamentos();
     DescarregarJogador(&jogador);
-    for (int t=0; t<14; ++t) UnloadTexture(gTiles[t]);
+    for (int t = 0; t < 14; ++t) {
+        if (gTiles[t].id != 0) {
+            UnloadTexture(gTiles[t]);
+        }
+    }
     destruir_mapa_encadeado(gMapa, MAP_L);
+    UnloadFont(fonteNormal);
+    UnloadFont(fonteBold);
+    UnloadFont(fonteBoldPequena);
     CloseWindow();
     return 0;
 }

@@ -1,9 +1,11 @@
 #include "jogador.h"
+#include "mapa.h"
 #include <math.h>
 #include <string.h>
 
-static inline float ComprimentoVetor(float x, float y) {
-    return sqrtf(x*x + y*y);
+static inline float ComprimentoVetor(float x, float y)
+{
+    return sqrtf(x * x + y * y);
 }
 
 bool IniciarJogador(Jogador* j,
@@ -20,6 +22,8 @@ bool IniciarJogador(Jogador* j,
     j->posicao    = posInicial;
     j->velocidade = velocidade;
     j->vida       = vida;
+    j->vidaMaxima = vida;
+    j->regeneracaoBase = 2.0f;
 
     j->parado   = LoadTexture(caminhoParado);
     j->andando1 = LoadTexture(caminhoAndando1);
@@ -37,7 +41,6 @@ bool IniciarJogador(Jogador* j,
     j->acumulador    = 0.0f;
     j->alternarFrame = true;
     j->emMovimento   = false;
-
     j->noAtual = NULL;
 
     return true;
@@ -83,7 +86,7 @@ void DesenharJogador(const Jogador* j)
     if (j->emMovimento)
         spriteAtual = j->alternarFrame ? j->andando1 : j->andando2;
 
-    float escala = 1.0f; // ⬅️ dobra o tamanho do personagem
+    float escala = 1.0f;
 
     DrawTextureEx(
         spriteAtual,
@@ -94,7 +97,6 @@ void DesenharJogador(const Jogador* j)
         WHITE
     );
 }
-
 
 void DescarregarJogador(Jogador* j)
 {
@@ -116,3 +118,41 @@ Vector2 TamanhoJogador(const Jogador* j)
     return (Vector2){ atual.width, atual.height };
 }
 
+void AplicarColisaoPosicaoJogador(Jogador* j, Vector2 posAnterior,
+                                  Mapa **mapa, int linhas, int colunas,
+                                  int tileLargura, int tileAltura)
+{
+    if (!j || !mapa) return;
+
+    int i, jx;
+    bool dentro = ConverterPosicaoParaIndice(j->posicao.x, j->posicao.y,
+                                             tileLargura, tileAltura,
+                                             linhas, colunas,
+                                             &i, &jx);
+    if (!dentro) {
+        j->posicao = posAnterior;
+        j->noAtual = NULL;
+        return;
+    }
+
+    if (TilePossuiColisao(mapa, linhas, colunas, i, jx)) {
+        j->posicao = posAnterior;
+        j->noAtual = &mapa[i][jx];
+    }
+}
+
+void AtualizarNoAtualJogador(Jogador* j, Mapa **mapa, int linhas, int colunas,
+                             int tileLargura, int tileAltura)
+{
+    if (!j || !mapa) return;
+
+    int i, jx;
+    if (ConverterPosicaoParaIndice(j->posicao.x, j->posicao.y,
+                                   tileLargura, tileAltura,
+                                   linhas, colunas,
+                                   &i, &jx)) {
+        j->noAtual = &mapa[i][jx];
+    } else {
+        j->noAtual = NULL;
+    }
+}

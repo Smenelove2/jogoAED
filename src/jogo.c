@@ -1,7 +1,6 @@
 #include "jogo.h"
 #include "ui_utils.h"
 #include "mapa.h"
-#include "jogo_config.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -253,19 +252,18 @@ void JogoDesenhar(EstadoJogo *estado,
         if (estado->raygun.ativo) {
             DrawCircleV(estado->raygun.posicao, 6.0f, SKYBLUE);
         }
-        const float escalaEquipamento = ESCALA_MUNDO;
         DesenharJogador(jogador);
         if (capaceteAtual) {
-            DesenharCapacete(capaceteAtual, jogador->posicao, escalaEquipamento);
+            DesenharCapacete(capaceteAtual, jogador->posicao, 1.0f);
         }
         if (armaduraAtual) {
-            DesenharArmadura(armaduraAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, escalaEquipamento);
+            DesenharArmadura(armaduraAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, 1.0f);
         }
         if (armaSecundariaAtual) {
-            DesenharArmaSecundaria(armaSecundariaAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, escalaEquipamento);
+            DesenharArmaSecundaria(armaSecundariaAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, 1.0f);
         }
         if (armaPrincipalAtual) {
-            DesenharArmaPrincipal(armaPrincipalAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, escalaEquipamento);
+            DesenharArmaPrincipal(armaPrincipalAtual, jogador->posicao, jogador->emMovimento, jogador->alternarFrame, 1.0f);
         }
     EndMode2D();
 
