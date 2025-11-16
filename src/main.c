@@ -21,6 +21,22 @@ static Texture2D gTiles[14];
 static int TILE_W = 64;
 static int TILE_H = 64;
 static Mapa **gMapa = NULL;
+static const char *CAMINHOS_TILES[14] = {
+    "assets/tiles/cercadoPonta1.png",
+    "assets/tiles/cercadoPonta2.png",
+    "assets/tiles/cercadoPonta3.png",
+    "assets/tiles/cercadoPonta4.png",
+    "assets/tiles/cercadoEsquerda1.png",
+    "assets/tiles/cercadoEsquerda2.png",
+    "assets/tiles/cercadoDireita1.png",
+    "assets/tiles/cercadoDireita2.png",
+    "assets/tiles/cercadoCima1.png",
+    "assets/tiles/cercadoCima2.png",
+    "assets/tiles/cercadoBaixo1.png",
+    "assets/tiles/cercadoBaixo2.png",
+    "assets/tiles/grama1.png",
+    "assets/tiles/grama2.png"
+};
 
 typedef enum {
     TELA_MENU = 0,
@@ -32,6 +48,79 @@ static TelaAtual gTelaAtual = TELA_MENU;
 static float gVidaBaseJogador = 100.0f;
 static const float LARGURA_BASE_UI = 1280.0f;
 static const float ALTURA_BASE_UI = 720.0f;
+
+static bool CarregarTilesEGerarMapa(void)
+{
+    gTiles[12] = LoadTexture(CAMINHOS_TILES[12]);
+    if (gTiles[12].id == 0) {
+        printf("Erro: Nao foi possivel carregar tile de referencia 'grama1.png'\n");
+        return false;
+    }
+    TILE_W = gTiles[12].width;
+    TILE_H = gTiles[12].height;
+
+    gMapa = criar_mapa_encadeado(MAP_L, MAP_C, TILE_W, TILE_H);
+    if (!gMapa) {
+        UnloadTexture(gTiles[12]);
+        gTiles[12] = (Texture2D){0};
+        return false;
+    }
+
+    for (int i = 0; i < 14; ++i) {
+        if (i == 12) continue;
+        gTiles[i] = LoadTexture(CAMINHOS_TILES[i]);
+    }
+
+    bool ok = true;
+    for (int i = 0; i < 14; ++i) {
+        if (gTiles[i].id == 0) {
+            printf("Erro: Falha ao carregar tile ID %d\n", i);
+            ok = false;
+        }
+    }
+    if (!ok) {
+        for (int t = 0; t < 14; ++t) {
+            if (gTiles[t].id != 0) UnloadTexture(gTiles[t]);
+            gTiles[t] = (Texture2D){0};
+        }
+        destruir_mapa_encadeado(gMapa, MAP_L);
+        gMapa = NULL;
+    }
+    return ok;
+}
+
+static void DescarregarTilesEMapa(void)
+{
+    for (int t = 0; t < 14; ++t) {
+        if (gTiles[t].id != 0) {
+            UnloadTexture(gTiles[t]);
+            gTiles[t] = (Texture2D){0};
+        }
+    }
+    if (gMapa) {
+        destruir_mapa_encadeado(gMapa, MAP_L);
+        gMapa = NULL;
+    }
+}
+
+static bool IniciarJogadorPadrao(Jogador *jogador, Vector2 posInicial)
+{
+    if (!jogador) return false;
+    bool ok = IniciarJogador(
+        jogador,
+        posInicial,
+        400.0f,
+        10.0f,
+        100.0f,
+        "assets/personagem/personagemParado.png",
+        "assets/personagem/personagemAndando1.png",
+        "assets/personagem/personagemAndando2.png"
+    );
+    if (ok) {
+        gVidaBaseJogador = jogador->vidaMaxima;
+    }
+    return ok;
+}
 
 int main(void)
 {
@@ -48,49 +137,7 @@ int main(void)
     Font fonteBold = LoadFont("assets/fontes/PixelOperator-Bold.ttf");
     Font fonteBoldPequena = LoadFont("assets/fontes/PixelOperator8-Bold.ttf");
 
-    gTiles[12] = LoadTexture("assets/tiles/grama1.png");
-    if (gTiles[12].id == 0) {
-        printf("Erro: Nao foi possivel carregar tile de referencia 'grama1.png'\n");
-        CloseWindow();
-        return 1;
-    }
-    TILE_W = gTiles[12].width;
-    TILE_H = gTiles[12].height;
-    printf("Tamanho do tile detectado: %dx%d\n", TILE_W, TILE_H);
-
-    gMapa = criar_mapa_encadeado(MAP_L, MAP_C, TILE_W, TILE_H);
-    if (!gMapa) {
-        UnloadTexture(gTiles[12]);
-        CloseWindow();
-        return 1;
-    }
-
-    gTiles[0]  = LoadTexture("assets/tiles/cercadoPonta1.png");
-    gTiles[1]  = LoadTexture("assets/tiles/cercadoPonta2.png");
-    gTiles[2]  = LoadTexture("assets/tiles/cercadoPonta3.png");
-    gTiles[3]  = LoadTexture("assets/tiles/cercadoPonta4.png");
-    gTiles[4]  = LoadTexture("assets/tiles/cercadoEsquerda1.png");
-    gTiles[5]  = LoadTexture("assets/tiles/cercadoEsquerda2.png");
-    gTiles[6]  = LoadTexture("assets/tiles/cercadoDireita1.png");
-    gTiles[7]  = LoadTexture("assets/tiles/cercadoDireita2.png");
-    gTiles[8]  = LoadTexture("assets/tiles/cercadoCima1.png");
-    gTiles[9]  = LoadTexture("assets/tiles/cercadoCima2.png");
-    gTiles[10] = LoadTexture("assets/tiles/cercadoBaixo1.png");
-    gTiles[11] = LoadTexture("assets/tiles/cercadoBaixo2.png");
-    gTiles[13] = LoadTexture("assets/tiles/grama2.png");
-
-    bool okTiles = true;
-    for (int t = 0; t < 14; ++t) {
-        if (gTiles[t].id == 0) {
-            printf("Erro: Falha ao carregar tile ID %d\n", t);
-            okTiles = false;
-        }
-    }
-    if (!okTiles) {
-        for (int t = 0; t < 14; ++t) {
-            if (gTiles[t].id != 0) UnloadTexture(gTiles[t]);
-        }
-        destruir_mapa_encadeado(gMapa, MAP_L);
+    if (!CarregarTilesEGerarMapa()) {
         CloseWindow();
         return 1;
     }
@@ -101,23 +148,11 @@ int main(void)
     };
 
     Jogador jogador;
-    bool ok = IniciarJogador(
-        &jogador,
-        posInicial,
-        400.0f,
-        10.0f,
-        100.0f,
-        "assets/personagem/personagemParado.png",
-        "assets/personagem/personagemAndando1.png",
-        "assets/personagem/personagemAndando2.png"
-    );
-    if (!ok) {
-        for (int t = 0; t < 14; ++t) UnloadTexture(gTiles[t]);
-        destruir_mapa_encadeado(gMapa, MAP_L);
+    if (!IniciarJogadorPadrao(&jogador, posInicial)) {
+        DescarregarTilesEMapa();
         CloseWindow();
         return 1;
     }
-    gVidaBaseJogador = jogador.vidaMaxima;
 
     CarregarTexturasEquipamentos();
 
@@ -132,9 +167,6 @@ int main(void)
     ArmaSecundaria *armaSecundariaAtual = NULL;
 
     AtualizarNoAtualJogador(&jogador, gMapa, MAP_L, MAP_C, TILE_W, TILE_H);
-    if (jogador.noAtual) {
-        printf("Jogador iniciou no no (%d, %d)\n", jogador.noAtual->linha, jogador.noAtual->coluna);
-    }
 
     Camera2D camera = {0};
     camera.target = jogador.posicao;
@@ -258,12 +290,7 @@ int main(void)
     JogoLiberarRecursos(&estadoJogo);
     DescarregarTexturasEquipamentos();
     DescarregarJogador(&jogador);
-    for (int t = 0; t < 14; ++t) {
-        if (gTiles[t].id != 0) {
-            UnloadTexture(gTiles[t]);
-        }
-    }
-    destruir_mapa_encadeado(gMapa, MAP_L);
+    DescarregarTilesEMapa();
     UnloadFont(fonteNormal);
     UnloadFont(fonteBold);
     UnloadFont(fonteBoldPequena);

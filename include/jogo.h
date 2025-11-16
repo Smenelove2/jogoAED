@@ -25,10 +25,10 @@ typedef struct {
     Vector2 direcao;
     Vector2 velocidade;
     float tempoRestante;
-} RaygunProjetil;
+} ProjetilRaygun;
 
 typedef struct {
-    RaygunProjetil raygun;
+    ProjetilRaygun projetilRaygun;
     EstadoArmaSecundaria armaSecundaria;
     float cooldownArmaSecundaria;
     float regeneracaoAtual;

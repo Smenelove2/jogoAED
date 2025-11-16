@@ -107,7 +107,7 @@ void JogoInicializar(EstadoJogo *estado, float regeneracaoBase)
 void JogoReiniciar(EstadoJogo *estado, Jogador *jogador, Camera2D *camera, Vector2 posInicial)
 {
     if (!estado || !jogador || !camera) return;
-    estado->raygun = (RaygunProjetil){0};
+    estado->projetilRaygun = (ProjetilRaygun){0};
     estado->armaSecundaria = (EstadoArmaSecundaria){0};
     estado->cooldownArmaSecundaria = 0.0f;
     estado->tempoMensagemAtaque = 0.0f;
@@ -120,15 +120,15 @@ void JogoReiniciar(EstadoJogo *estado, Jogador *jogador, Camera2D *camera, Vecto
     camera->target = jogador->posicao;
 }
 
-static void AtualizarRaygun(EstadoJogo *estado, float dt)
+static void AtualizarProjetilRaygun(EstadoJogo *estado, float dt)
 {
-    if (!estado || !estado->raygun.ativo) return;
-    estado->raygun.posicao.x += estado->raygun.velocidade.x * dt;
-    estado->raygun.posicao.y += estado->raygun.velocidade.y * dt;
-    estado->raygun.tempoRestante -= dt;
-    if (estado->raygun.tempoRestante <= 0.0f) {
-        estado->raygun.ativo = false;
-        estado->raygun.arma = NULL;
+    if (!estado || !estado->projetilRaygun.ativo) return;
+    estado->projetilRaygun.posicao.x += estado->projetilRaygun.velocidade.x * dt;
+    estado->projetilRaygun.posicao.y += estado->projetilRaygun.velocidade.y * dt;
+    estado->projetilRaygun.tempoRestante -= dt;
+    if (estado->projetilRaygun.tempoRestante <= 0.0f) {
+        estado->projetilRaygun.ativo = false;
+        estado->projetilRaygun.arma = NULL;
         snprintf(estado->mensagemAtaque, sizeof(estado->mensagemAtaque), "RayGun impactou!");
         estado->tempoMensagemAtaque = 0.5f;
     }
@@ -249,20 +249,20 @@ void JogoAtualizar(EstadoJogo *estado,
                     };
 
                     armaPrincipalAtual->tempoRecargaRestante = armaPrincipalAtual->tempoRecarga;
-                    estado->raygun.ativo = true;
-                    estado->raygun.arma = armaPrincipalAtual;
-                    estado->raygun.origem = jogador->posicao;
-                    estado->raygun.posicao = jogador->posicao;
-                    estado->raygun.destino = destino;
-                    estado->raygun.direcao = direcao;
-                    estado->raygun.velocidade = (Vector2){
+                    estado->projetilRaygun.ativo = true;
+                    estado->projetilRaygun.arma = armaPrincipalAtual;
+                    estado->projetilRaygun.origem = jogador->posicao;
+                    estado->projetilRaygun.posicao = jogador->posicao;
+                    estado->projetilRaygun.destino = destino;
+                    estado->projetilRaygun.direcao = direcao;
+                    estado->projetilRaygun.velocidade = (Vector2){
                         direcao.x * RAYGUN_PROJETIL_VELOCIDADE,
                         direcao.y * RAYGUN_PROJETIL_VELOCIDADE
                     };
                     float distProj = ComprimentoV2((Vector2){ destino.x - jogador->posicao.x, destino.y - jogador->posicao.y });
                     float tempoProj = distProj / RAYGUN_PROJETIL_VELOCIDADE;
                     if (tempoProj < 0.08f) tempoProj = 0.08f;
-                    estado->raygun.tempoRestante = tempoProj;
+                    estado->projetilRaygun.tempoRestante = tempoProj;
                     snprintf(estado->mensagemAtaque, sizeof(estado->mensagemAtaque), "Disparo RayGun!");
                     estado->tempoMensagemAtaque = 0.5f;
                 } else {
@@ -289,8 +289,8 @@ void JogoAtualizar(EstadoJogo *estado,
             }
         }
 
-        if (estado->raygun.ativo) {
-            AtualizarRaygun(estado, dt);
+        if (estado->projetilRaygun.ativo) {
+            AtualizarProjetilRaygun(estado, dt);
         }
 
         if (estado->regeneracaoAtual > 0.0f && jogador->vida < jogador->vidaMaxima) {
@@ -353,7 +353,7 @@ void JogoAtualizar(EstadoJogo *estado,
             }
         }
     } else {
-        AtualizarRaygun(estado, dt);
+        AtualizarProjetilRaygun(estado, dt);
     }
     if (estado->pausado) {
         // mantém objetos parados quando pausado
@@ -394,8 +394,8 @@ void JogoDesenhar(EstadoJogo *estado,
 
         DesenharEfeitoArmaPrincipal(&estado->efeitoArmaPrincipal);
         UI_DesenharEfeitoArmaSecundaria(&estado->armaSecundaria, jogador->posicao);
-        if (estado->raygun.ativo) {
-            DrawCircleV(estado->raygun.posicao, 6.0f, SKYBLUE);
+        if (estado->projetilRaygun.ativo) {
+            DrawCircleV(estado->projetilRaygun.posicao, 6.0f, SKYBLUE);
         }
         DesenharJogador(jogador);
         if (capaceteAtual) {
@@ -484,7 +484,7 @@ void JogoDesenhar(EstadoJogo *estado,
         if (UI_BotaoTexto(btnMenu, "Sair para o Menu", mousePos, mouseClick,
                            (Color){120, 60, 60, 255}, (Color){220, 120, 120, 255}, fonteBold, true)) {
             estado->pausado = false;
-            estado->raygun.ativo = false;
+            estado->projetilRaygun.ativo = false;
             estado->armaSecundaria.ativo = false;
             estado->armaSecundaria.dados = NULL;
             estado->cooldownArmaSecundaria = 0.0f;

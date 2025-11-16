@@ -270,6 +270,10 @@ void IAAtualizarMonstro(Monstro *m, struct Jogador *jogador, float dt)
     float dx = jogador->posicao.x - m->posicao.x;
     float dy = jogador->posicao.y - m->posicao.y;
     float distancia = sqrtf(dx * dx + dy * dy);
+    
+    if (distancia <= 0.01f) {
+        return false;
+    }
 
     // Se o jogador está dentro do raio de detecção, move em sua direção
     if (distancia < m->raioDeteccao && distancia > 0.01f)
@@ -302,12 +306,20 @@ bool VerificarColisaoMonstroJogador(Monstro *m, struct Jogador *jogador)
 }
 
 bool TentarLancarObjeto(Monstro *m, float dt, Vector2 alvo) {
+    if (!m) return false;
     if (m->tipo != MONSTRO_ESQUELETO && m->tipo != MONSTRO_IT) {
         return false;
     }
     
     if (!m->objeto || m->objeto->ativo) {
         return false; 
+    }
+    
+    if (m->acumuladorArremesso > 0.0f) {
+        m->acumuladorArremesso -= dt;
+        if (m->acumuladorArremesso > 0.0f) {
+            return false;
+        }
     }
     
     float dx = alvo.x - m->posicao.x;
