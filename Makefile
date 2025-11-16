@@ -18,6 +18,7 @@ OBJECTS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
 
 # Detect OS
 UNAME_S := $(shell uname -s 2>/dev/null || echo Unknown)
+RAYLIB_STAMP := $(RAYLIB_SRC)/.stamp-$(UNAME_S)
 
 # Common flags
 CC      ?= gcc
@@ -58,17 +59,25 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 $(BUILD_DIR) $(BIN_DIR):
 	mkdir -p $@
 
-# Build raylib from submodule if the static lib is not present
-deps: $(RAYLIB_SRC)/libraylib.a
+# Build raylib for the current platform when needed
+deps: $(RAYLIB_STAMP)
 
-$(RAYLIB_SRC)/libraylib.a:
+$(RAYLIB_STAMP):
 	@if [ ! -e "$(RAYLIB_DIR)/.git" ]; then \
 		echo ">> Raylib submodule not present. Fetching..."; \
 		git submodule update --init --recursive || exit 1; \
 	fi
+	@echo ">> Cleaning raylib (platform switch)..."
+	@rm -f $(RAYLIB_SRC)/*.o \
+	       $(RAYLIB_SRC)/libraylib.a \
+	       $(RAYLIB_SRC)/libraylib.web.a \
+	       $(RAYLIB_SRC)/libraylib.so* \
+	       $(RAYLIB_SRC)/raygui.c \
+	       $(RAYLIB_SRC)/../src/*-protocol.h \
+	       $(RAYLIB_SRC)/../src/*-protocol-code.h
 	@echo ">> Building raylib..."
 	$(MAKE) -C $(RAYLIB_SRC) PLATFORM=PLATFORM_DESKTOP
-
+	@touch $@
 
 # Initialize git submodule
 setup:
@@ -85,6 +94,7 @@ clean:
 distclean: clean
 	@echo ">> Cleaning raylib build artifacts"
 	@$(MAKE) -C $(RAYLIB_SRC) clean || true
+	@rm -f $(RAYLIB_SRC)/.stamp-*
 	@rm -rf $(BIN_DIR)
 
 .PHONY: all deps setup run clean distclean

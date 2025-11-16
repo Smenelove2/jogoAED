@@ -10,6 +10,8 @@ typedef struct Jogador {
     Vector2 posicao;
     float velocidade;
     float vida;
+    float vidaMaxima;
+    float regeneracaoBase;
 
     Texture2D parado;
     Texture2D andando1;
@@ -40,5 +42,11 @@ void DescarregarJogador(Jogador* j);
 
 Vector2 TamanhoJogador(const Jogador* j);
 
+void AplicarColisaoPosicaoJogador(Jogador* j, Vector2 posAnterior,
+                                  struct Mapa **mapa, int linhas, int colunas,
+                                  int tileLargura, int tileAltura);
+
+void AtualizarNoAtualJogador(Jogador* j, struct Mapa **mapa, int linhas, int colunas,
+                             int tileLargura, int tileAltura);
 
 #endif // JOGADOR_H
