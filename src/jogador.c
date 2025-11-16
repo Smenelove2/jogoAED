@@ -1,11 +1,13 @@
 #include "jogador.h"
-#include "mapa.h"
+#include "mapa.h"  
 #include <math.h>
 #include <string.h>
 
-static inline float ComprimentoVetor(float x, float y)
-{
-    return sqrtf(x * x + y * y);
+#define MAP_L 65 
+#define MAP_C 65
+
+static inline float ComprimentoVetor(float x, float y) {
+    return sqrtf(x*x + y*y);
 }
 
 bool IniciarJogador(Jogador* j,
@@ -41,6 +43,7 @@ bool IniciarJogador(Jogador* j,
     j->acumulador    = 0.0f;
     j->alternarFrame = true;
     j->emMovimento   = false;
+
     j->noAtual = NULL;
 
     return true;
@@ -86,7 +89,7 @@ void DesenharJogador(const Jogador* j)
     if (j->emMovimento)
         spriteAtual = j->alternarFrame ? j->andando1 : j->andando2;
 
-    float escala = 1.0f;
+    float escala = 1.0f; // ⬅️ dobra o tamanho do personagem
 
     DrawTextureEx(
         spriteAtual,
@@ -97,6 +100,7 @@ void DesenharJogador(const Jogador* j)
         WHITE
     );
 }
+
 
 void DescarregarJogador(Jogador* j)
 {
@@ -155,4 +159,26 @@ void AtualizarNoAtualJogador(Jogador* j, Mapa **mapa, int linhas, int colunas,
     } else {
         j->noAtual = NULL;
     }
+}
+
+Vector4 DistanciaBordasJogador(const Jogador* j) {
+    // Vector4: X=Esquerda, Y=Cima, Z=Direita, W=Baixo
+    Vector4 distancias = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+    if (!j || !j->noAtual) {
+        return distancias;
+    }
+
+    const int i = j->noAtual->linha; // i = Linha (Y)
+    const int jx = j->noAtual->coluna; // jx = Coluna (X)
+    
+    // Linhas: Cima (Y) e Baixo (W)
+    distancias.y = (float)i; // Distância do topo: Linha atual (0..i)
+    distancias.w = (float)(MAP_L - 1 - i); // Distância do baixo: (MAP_L - 1) - Linha atual
+    
+    // Colunas: Esquerda (X) e Direita (Z)
+    distancias.x = (float)jx; // Distância da esquerda: Coluna atual (0..jx)
+    distancias.z = (float)(MAP_C - 1 - jx); // Distância da direita: (MAP_C - 1) - Coluna atual
+    
+    return distancias;
 }
