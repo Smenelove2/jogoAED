@@ -156,10 +156,15 @@ static bool AppInicializar(AppContext *ctx)
     const int alturaInicial = 720;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(larguraInicial, alturaInicial, "Tarefa: Identificar No do Jogador");
+    InitWindow(larguraInicial, alturaInicial, "Magic Toys Arena");
     SetWindowMinSize(960, 540);
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
+    Image icone = LoadImage("assets/personagem/personagemParado.png");
+    if (icone.data) {
+        SetWindowIcon(icone);
+        UnloadImage(icone);
+    }
 
     ctx->fonteNormal = LoadFont("assets/fontes/PixelOperator.ttf");
     ctx->fonteBold = LoadFont("assets/fontes/PixelOperator-Bold.ttf");
