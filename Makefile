@@ -1,12 +1,12 @@
-# jogoAED - Raylib project Makefile (submodule build)
+# MagicToysArena - Raylib project Makefile (submodule build)
 # Usage:
 #   make setup      -> init and fetch submodule (first time)
-#   make            -> build jogoAED (also builds raylib if needed)
+#   make            -> build MagicToysArena (also builds raylib if needed)
 #   make run        -> run the binary
 #   make clean      -> remove object files
 #   make distclean  -> clean and also remove raylib build artifacts
 
-PROJECT_NAME := jogoAED
+PROJECT_NAME := MagicToysArena
 SRC_DIR      := src
 BUILD_DIR    := build
 BIN_DIR      := bin

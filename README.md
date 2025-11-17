@@ -17,8 +17,8 @@ Pré-requisitos gerais:
    ```
 3. Clone e compile:
    ```bash
-   git clone --recurse-submodules https://github.com/SEU_USUARIO/jogoAED.git
-   cd jogoAED
+   git clone --recurse-submodules https://github.com/SEU_USUARIO/MagicToysArena.git
+   cd MagicToysArena
    make setup    # inicializa o submódulo da raylib (apenas na primeira vez)
    make          # compila raylib e o jogo
    make run      # executa
@@ -27,8 +27,8 @@ Pré-requisitos gerais:
 ### Linux (Debian/Ubuntu ou derivados)
 ```bash
 sudo apt update && sudo apt install build-essential git make
-git clone --recurse-submodules https://github.com/SEU_USUARIO/jogoAED.git
-cd jogoAED
+git clone --recurse-submodules https://github.com/SEU_USUARIO/MagicToysArena.git
+cd MagicToysArena
 make setup
 make
 make run
@@ -38,8 +38,8 @@ make run
 ```bash
 xcode-select --install
 brew install git make
-git clone --recurse-submodules https://github.com/SEU_USUARIO/jogoAED.git
-cd jogoAED
+git clone --recurse-submodules https://github.com/SEU_USUARIO/MagicToysArena.git
+cd MagicToysArena
 make setup
 make
 make run
@@ -66,7 +66,7 @@ make run
 
 ## 📂 Estrutura principal
 ```
-jogoAED/
+MagicToysArena/
 ├─ src/            # Códigos-fonte (app, jogo, menu, itens, monstros…)
 ├─ include/        # Headers
 ├─ assets/         # Sprites, fontes e mapas
@@ -78,7 +78,7 @@ jogoAED/
 
 ## 🔧 Comandos úteis
 * `make` – compila o projeto completo.
-* `make run` – executa `bin/jogoAED`.
+* `make run` – executa `bin/MagicToysArena`.
 * `make clean` – apaga objetos.
 * `make distclean` – `clean` + remove `bin/` e artefatos Raylib.
 * `make setup` – clona/atualiza o submódulo Raylib (quando necessário).
